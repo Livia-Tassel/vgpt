@@ -6,20 +6,24 @@ import config
 
 class Head(nn.Module):
     # head
-    def __init__(self, head_size):
+    def __init__(self, heads):
         super().__init__()
-        self.key = nn.Linear(config.N_EMBD, head_size, bias=False)
-        self.query = nn.Linear(config.N_EMBD, head_size, bias=False)
-        self.value = nn.Linear(config.N_EMBD, head_size, bias=False)
-        self.register_buffer('tril', torch.tril(torch.ones(config.BLOCK_SIZE, config.BLOCK_SIZE)))
+        # K, Q, V
+        self.key = nn.Linear(config.N_EMBD, heads, bias=False)
+        self.query = nn.Linear(config.N_EMBD, heads, bias=False)
+        self.value = nn.Linear(config.N_EMBD, heads, bias=False)
+        # lower triangular matrix (masking)
+        self.register_buffer('tril', torch.tril(torch.ones(config.BLOCK_SIZE, config.BLOCK_SIZE))) 
         self.dropout = nn.Dropout(config.DROPOUT)
 
     def forward(self, x):
         B, T, C = x.shape
         k = self.key(x)
         q = self.query(x)
+        # (q @ k)/(dk)^(0.5)
         wei = q @ k.transpose(-2, -1) * C**-0.5
         wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
+        # softmax
         wei = F.softmax(wei, dim=-1)
         wei = self.dropout(wei)
         v = self.value(x)
@@ -28,9 +32,9 @@ class Head(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     # multi-head
-    def __init__(self, num_heads, head_size):
+    def __init__(self, num_heads, heads):
         super().__init__()
-        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([Head(heads) for _ in range(num_heads)])
         self.proj = nn.Linear(config.N_EMBD, config.N_EMBD)
         self.dropout = nn.Dropout(config.DROPOUT)
 
@@ -55,8 +59,8 @@ class FeedForward(nn.Module):
 class Block(nn.Module):
     def __init__(self, n_embd, n_head):
         super().__init__()
-        head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size)
+        heads = n_embd // n_head
+        self.sa = MultiHeadAttention(n_head, heads)
         self.ffwd = FeedForward(n_embd)
         self.ln1 = nn.LayerNorm(n_embd)
         self.ln2 = nn.LayerNorm(n_embd)
@@ -70,8 +74,10 @@ class GPTLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, config.N_EMBD)
+        # position embedding
         self.position_embedding_table = nn.Embedding(config.BLOCK_SIZE, config.N_EMBD)
         self.blocks = nn.Sequential(*[Block(config.N_EMBD, n_head=config.N_HEAD) for _ in range(config.N_LAYER)])
+        # layer normalization
         self.ln_f = nn.LayerNorm(config.N_EMBD)
         self.lm_head = nn.Linear(config.N_EMBD, vocab_size)
 
@@ -95,9 +101,11 @@ class GPTLanguageModel(nn.Module):
         return logits, loss
 
     def generate(self, idx, max_new_tokens):
+        # repeat
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -config.BLOCK_SIZE:]
             logits, loss = self(idx_cond)
+            # the last logits
             logits = logits[:, -1, :]
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)

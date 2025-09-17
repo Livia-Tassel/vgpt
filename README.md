@@ -15,7 +15,7 @@ Mini-GPT 是一个轻量级的语言模型，它在莎士比亚作品的文本�
 * **完整的 Transformer 架构**：实现了标准的 Transformer Block，包含多头自注意力机制、前馈神经网络、层归一化和残差连接。
 * **模块化代码**：将数据处理、模型定义、训练与生成逻辑分离到独立的文件中，提升了代码的可读性与可维护性。
 * **弹性的配置管理**：所有超参数（如模型维度、网络层数、学习率等）均集中在 `config.py` 中，方便快速调整与实验。
-* **硬件加速**：自动检测并支持 Apple Silicon (MPS) 与 NVIDIA (CUDA) 的 GPU 加速，大幅缩短训练时间。
+* **硬件加速**：自动检测并支持 Apple Silicon 与 NVIDIA 的 GPU 加速，大幅缩短训练时间。
 * **端到端的流程**：提供从数据下载、预处理、模型训练到文本生成的完整脚本。
 
 ## 架构概览
@@ -24,33 +24,12 @@ Mini-GPT 是一个轻量级的语言模型，它在莎士比亚作品的文本�
 2.  **Transformer Blocks**：由 N 个 Transformer Block 堆叠而成。每个 Block 包含：
     * **带有掩码的多头自注意力层**，用于捕捉上下文信息。
     * **前馈神经网络**，用于进行非线性变换。
-3.  **输出层**：线性层，将 Transformer 的输出转换为对应词汇表大小的 Logits，用于预测下一个字符。
+3.  **输出层**：线性层，将 Transformer 的输出转换为对应词汇表大小的 Logits，用于预测下个字符。
 
 ## 环境要求
 * Python 3.9+
 * Git
 * Conda
-
-## 快速入门
-对于熟悉 Python 环境的开发者，可以依照以下步骤快速启动项目：
-```bash
-# 1. 克隆项目
-git clone [https://github.com/Livia-Tassel/vgpt.git](https://github.com/Livia-Tassel/vgpt.git)
-cd vgpt
-
-# 2. 创建并启用 Conda 环境
-conda create --name vgpt python=3.10
-conda activate vgpt
-
-# 3. 安装依赖
-pip install -r requirements.txt
-
-# 4. 开始训练
-python train.py
-
-# 5. 生成文本
-python generate.py
-```
 
 ## 详细步骤
 ### 1. 克隆项目
@@ -60,10 +39,9 @@ cd vgpt
 ```
 
 ### 2. 环境设置
-我强烈建议使用 Conda 来创建一个干净且独立的 Python 环境。
 #### 使用 Conda
 ```bash
-# 创建一个名为 vgpt 的新环境
+# 创建 vgpt 的新环境
 conda create --name vgpt python=3.10
 
 # 启用该环境
@@ -72,10 +50,10 @@ conda activate vgpt
 # 安装所有必要的函数库
 pip install -r requirements.txt
 ```
-启用成功后，您的终端提示符前会显示 `(vgpt)`。
+启用成功后，你的终端提示符前会显示 `(vgpt)`。
 
-#### 使用 venv
-如果您未安装 Conda，也可以使用 Python 内置的 `venv`。
+#### 或使用 venv
+如果你未安装 Conda，也可以使用 Python 内置的 `venv`。
 ```bash
 # 创建虚拟环境
 python3 -m venv venv
@@ -92,7 +70,7 @@ pip install -r requirements.txt
 ```bash
 python train.py
 ```
-训练过程中，您会看到损失值在终端上定期输出。训练完成后，模型权重会被保存在 `saved_models/gpt_model.pth`。
+训练过程中，你会看到损失值在终端上定期输出。训练完成后，模型权重会被保存在 `saved_models/gpt_model.pth`。
 
 ### 4. 文本生成
 使用训练好的模型来生成新的文本。
@@ -102,7 +80,7 @@ python generate.py
 脚本会自动加载已保存的模型，并在屏幕上打印出一段模仿莎士比亚风格的文本。
 
 ## 配置管理
-本项目的所有超参数都集中在 `config.py` 文件中，您可以轻松修改以进行实验。
+本项目的所有超参数都集中在 `config.py` 文件中，你可以轻松修改以进行实验。
 * `BATCH_SIZE`, `BLOCK_SIZE`：控制训练时的批量大小与上下文长度。
 * `MAX_ITERS`, `LEARNING_RATE`：设定训练的总迭代次数与学习率。
 * `N_EMBD`, `N_HEAD`, `N_LAYER`：定义模型的维度、注意力头数和 Transformer 的层数，直接影响模型的容量与性能。
@@ -121,17 +99,54 @@ vgpt/
 └── README.md
 ```
 
+## 项目扩展
+由于本项目高度得模块化，在实际项目中可以采用你自己的数据集来训练出独属于你的微型 GPT，具体操作步骤如下：
+1.  获取数据集，例如在开源网站——[“中国诗词”](chinese-poetry/json)中找到李白的诗集，即名为`poet.tang.21050.json`的档案。
+2.  创建一个新的分支 (`git checkout -b feature/feature-name`)。
+3.  将下载好的`poet.tang.21050.json`文件，放入项目的`data`文件夹中。
+4.  修改`data_loader.py`代码：
+```python
+def load_and_preprocess_libai_data():
+    data_path = os.path.join(config.DATA_DIR, 'poet.tang.21050.json')
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"The file can't be found: {data_path}。")
+
+    with open(data_path, 'r', encoding='utf-8') as f:
+        poems_json = json.load(f)
+
+    full_text = ""
+    for poem in poems_json:
+        full_text += "".join(poem['paragraphs']) + "\n"
+        
+    print(f"Complete data: {len(full_text)}")
+    return full_text
+
+def get_data_and_vocab():
+    text = load_and_preprocess_libai_data()
+
+    chars = sorted(list(set(text)))
+    vocab_size = len(chars)
+    
+    stoi = {ch: i for i, ch in enumerate(chars)}
+    itos = {i: ch for i, ch in enumerate(chars)}
+    
+    encode = lambda s: [stoi[c] for c in s]
+    decode = lambda l: ''.join([itos[i] for i in l])
+    
+    return text, chars, vocab_size, encode, decode
+```
+5.  根据自己需求调整超参数并修改对应文件路径，其余步骤完全无需修改。
+
 ## 贡献指南
-我们欢迎任何形式的贡献！如果您有任何建议或发现了 bug，请提交一个 Issue。如果您想贡献代码，请遵循以下流程：
+我们欢迎任何形式的贡献！如果你有任何建议或发现了 bug，请提交一个 Issue。如果你想贡献代码，请遵循以下流程：
 1.  Fork 本项目。
-2.  创建一个新的分支 (`git checkout -b feature/your-feature-name`)。
-3.  提交您的变更 (`git commit -m 'Add some feature'`)。
-4.  将您的分支推送到远程 (`git push origin feature/your-feature-name`)。
+2.  创建一个新的分支 (`git checkout -b feature/feature-name`)。
+3.  提交你的变更 (`git commit -m 'some feature'`)。
+4.  将你的分支推送到远程 (`git push origin feature/feature-name`)。
 5.  创建一个 Pull Request。
 
 ## 授权条款
 本项目采用 [MIT License](https://opensource.org/licenses/MIT) 授权。
 
 ## 联系信息
-项目维护者：[Livia] - [3459465562@qq.com]
 项目链接：[https://github.com/Livia-Tassel/vgpt](https://github.com/Livia-Tassel/vgpt)

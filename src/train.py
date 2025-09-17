@@ -19,6 +19,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=config.LEARNING_RATE)
 def estimate_loss():
     # evaluate loss
     out = {}
+    # pause training model
     model.eval()
     for split in ['train', 'val']:
         losses = torch.zeros(config.EVAL_ITERS)
@@ -27,13 +28,13 @@ def estimate_loss():
             logits, loss = model(X, Y)
             losses[k] = loss.item()
         out[split] = losses.mean()
+    # restart training model
     model.train()
     return out
 
 # --- repeat training ---
-print("Starting Training...")
+print("Starting training...")
 for iter in range(config.MAX_ITERS):
-    # evaluate losses periodically
     if iter % config.EVAL_INTERVAL == 0 or iter == config.MAX_ITERS - 1:
         losses = estimate_loss()
         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
@@ -52,4 +53,4 @@ print("Training Finished!")
 os.makedirs(config.MODEL_DIR, exist_ok=True)
 model_path = os.path.join(config.MODEL_DIR, config.MODEL_NAME)
 torch.save(model.state_dict(), model_path)
-print(f"Model Saved to {model_path}")
+print(f"Model saved to {model_path}")

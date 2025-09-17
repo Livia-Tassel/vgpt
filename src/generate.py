@@ -5,10 +5,10 @@ import config
 from model import GPTLanguageModel
 from data_loader import get_data_and_vocab
 
-_, _, vocab_size, _, decode = get_data_and_vocab()
+_, _, vocabs, _, decode = get_data_and_vocab()
 
 # --- loading model ---
-model = GPTLanguageModel(vocab_size)
+model = GPTLanguageModel(vocabs)
 model_path = os.path.join(config.MODEL_DIR, config.MODEL_NAME)
 
 if not os.path.exists(model_path):
